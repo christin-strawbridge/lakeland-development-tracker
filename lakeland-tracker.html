@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakeland Development Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --deep-teal: #0B3B3C;
+    --teal-mid: #145252;
+    --citrus: #E17A2D;
+    --citrus-light: #F4A661;
+    --cream: #FAF8F3;
+    --ink: #1C2624;
+    --line: #DDD6C8;
+
+    --c-residential: #3B6FB6;
+    --c-commercial: #1E9E8E;
+    --c-mixeduse: #8B4FB0;
+    --c-hotel: #C9962F;
+    --c-government: #6B6F76;
+    --c-industrial: #B0472F;
+    --c-parks: #4B8F3E;
+    --c-cultural: #C63C7A;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Public Sans', sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+  }
+
+  .app { display: flex; flex-direction: column; height: 100vh; }
+
+  header {
+    background: var(--deep-teal);
+    color: var(--cream);
+    padding: 18px 28px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    border-bottom: 3px solid var(--citrus);
+  }
+  header h1 {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  header .eyebrow {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--citrus-light);
+    font-weight: 600;
+  }
+  header .tagline {
+    margin-left: auto;
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+
+  .stats-strip {
+    background: var(--teal-mid);
+    color: var(--cream);
+    padding: 10px 28px;
+    display: flex;
+    gap: 32px;
+    font-family: 'Archivo', sans-serif;
+    flex-wrap: wrap;
+  }
+  .stat { display: flex; align-items: baseline; gap: 8px; }
+  .stat .num { font-size: 1.3rem; font-weight: 700; color: #FFFFFF; }
+  .stat .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; }
+
+  .body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .sidebar {
+    width: 290px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--line);
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .sidebar h2 {
+    font-family: 'Archivo', sans-serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--teal-mid);
+    margin: 0 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--line);
+  }
+  .search-box {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: 'Public Sans', sans-serif;
+    font-size: 0.88rem;
+    margin-bottom: 22px;
+  }
+  .filter-group { margin-bottom: 22px; }
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 0;
+    font-size: 0.88rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .filter-row input { accent-color: var(--teal-mid); width: 15px; height: 15px; cursor: pointer; }
+  .swatch {
+    width: 11px; height: 11px; border-radius: 50%;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(0,0,0,0.15);
+  }
+  .filter-row .count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #8A8A82;
+  }
+  .reset-link {
+    font-size: 0.8rem;
+    color: var(--citrus);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .reset-link:hover { text-decoration: underline; }
+
+  #map { flex: 1; }
+
+  .leaflet-popup-content-wrapper { border-radius: 8px; }
+  .popup-title {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin: 0 0 4px 0;
+    color: var(--deep-teal);
+  }
+  .popup-type-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .popup-photo {
+    width: 100%;
+    max-width: 260px;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: block;
+    background: #eee;
+  }
+  .popup-desc { font-size: 0.85rem; line-height: 1.4; margin-bottom: 8px; }
+  .popup-meta { font-size: 0.78rem; color: #555; line-height: 1.6; }
+  .popup-meta strong { color: var(--ink); }
+  .popup-link { font-size: 0.8rem; color: var(--citrus); font-weight: 600; text-decoration: none; }
+
+  .empty-note {
+    padding: 40px 16px;
+    text-align: center;
+    color: #999;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 760px) {
+    .body { flex-direction: column; }
+    .sidebar { width: 100%; max-height: 220px; border-right: none; border-bottom: 1px solid var(--line); }
+    header .tagline { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="eyebrow">Lakeland Economic Development Council</div>
+      <h1>Development Tracker</h1>
+    </div>
+    <div class="tagline">Live pipeline of projects shaping Lakeland's growth</div>
+  </header>
+
+  <div class="stats-strip" id="statsStrip"></div>
+
+  <div class="body">
+    <div class="sidebar">
+      <h2>Search</h2>
+      <input type="text" class="search-box" id="searchBox" placeholder="Project name or address…">
+
+      <h2>Status</h2>
+      <div class="filter-group" id="statusFilters"></div>
+
+      <h2>Project Type</h2>
+      <div class="filter-group" id="typeFilters"></div>
+
+      <span class="reset-link" id="resetLink">Reset all filters</span>
+    </div>
+
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+
+/* ============================================================
+   DATA SOURCE
+   Replace SAMPLE_DATA below with a live fetch once your Google
+   Sheet is published as CSV. Instructions further down.
+   ============================================================ */
+
+// Set this to your published Google Sheet CSV URL to go live.
+// Example: "https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/pub?output=csv"
+const SHEET_CSV_URL = null; // <-- paste your published CSV link here when ready
+
+const SAMPLE_DATA = [
+  {name:"Bonnet Springs Park North Gateway", address:"1000 E Main St, Lakeland, FL", lat:28.0468, lng:-81.9418, status:"Completed", type:"Parks & Recreation", description:"Trailhead and welcome plaza addition connecting downtown to Bonnet Springs Park.", developer:"City of Lakeland", construction:"New", investment:"$4.2M", units:"—", source:"", photo:""},
+  {name:"Munn Park Mixed-Use Infill", address:"S Kentucky Ave, Lakeland, FL", lat:28.0392, lng:-81.9506, status:"Under Construction", type:"Mixed Use", description:"Ground-floor retail with 48 residential units above, replacing a surface parking lot on the square.", developer:"Roux Development Group", construction:"New", investment:"$16.8M", units:"48 units", source:"", photo:""},
+  {name:"South Florida Avenue Lofts", address:"S Florida Ave, Lakeland, FL", lat:28.0285, lng:-81.9503, status:"In Development", type:"Residential", description:"Adaptive reuse of a former furniture warehouse into 62 loft-style apartments.", developer:"Heartland Urban Partners", construction:"Redevelopment", investment:"$11.5M", units:"62 units", source:"", photo:""},
+  {name:"Lake Mirror Promenade Hotel", address:"N Massachusetts Ave, Lakeland, FL", lat:28.0421, lng:-81.9491, status:"Proposed", type:"Hotel", description:"Boutique 90-room hotel overlooking Lake Mirror with rooftop restaurant.", developer:"Citrus Line Hospitality", construction:"New", investment:"$22M", units:"90 rooms", source:"", photo:""},
+  {name:"Dixieland Commons", address:"S Florida Ave & E Bella Vista St, Lakeland, FL", lat:28.0261, lng:-81.9499, status:"Proposed", type:"Commercial", description:"Neighborhood retail and office node anchoring the Dixieland corridor revitalization.", developer:"Bella Vista Partners", construction:"New", investment:"$8.1M", units:"—", source:"", photo:""},
+  {name:"RP Funding Center District Update", address:"701 W Lime St, Lakeland, FL", lat:28.0417, lng:-81.9601, status:"In Development", type:"Government", description:"Renovation and expansion of surrounding public plaza and parking infrastructure.", developer:"City of Lakeland", construction:"Renovation", investment:"$6.4M", units:"—", source:"", photo:""},
+  {name:"Lake Hollingsworth Cultural Pavilion", address:"Lake Hollingsworth Dr, Lakeland, FL", lat:28.0143, lng:-81.9457, status:"Proposed", type:"Cultural", description:"Outdoor performance pavilion and gallery space along the lake trail.", developer:"Lakeland Arts Alliance", construction:"New", investment:"$3.9M", units:"—", source:"", photo:""},
+  {name:"Dixie Manufacturing Yard Redevelopment", address:"N Combee Rd, Lakeland, FL", lat:28.0512, lng:-81.9187, status:"Under Construction", type:"Industrial", description:"Redevelopment of a former manufacturing yard into light-industrial flex space.", developer:"Combee Rd Industrial LLC", construction:"Redevelopment", investment:"$9.7M", units:"—", source:"", photo:""},
+  {name:"Downtown Lakeland Micro-Units", address:"E Main St, Lakeland, FL", lat:28.0403, lng:-81.9469, status:"Proposed", type:"Residential", description:"Six-story micro-unit apartment building targeting young professionals, 120 units.", developer:"Grove Point Development", construction:"New", investment:"$19.3M", units:"120 units", source:"", photo:""},
+  {name:"Lakeland Square Revitalization", address:"3800 US-98 N, Lakeland, FL", lat:28.0839, lng:-81.9678, status:"Completed", type:"Commercial", description:"Facade and tenant mix overhaul of the North Lakeland retail corridor.", developer:"Meridian Retail Partners", construction:"Renovation", investment:"$5.6M", units:"—", source:"", photo:""}
+];
+
+const TYPE_COLORS = {
+  "Residential": getComputedColor('--c-residential'),
+  "Commercial": getComputedColor('--c-commercial'),
+  "Mixed Use": getComputedColor('--c-mixeduse'),
+  "Hotel": getComputedColor('--c-hotel'),
+  "Government": getComputedColor('--c-government'),
+  "Industrial": getComputedColor('--c-industrial'),
+  "Parks & Recreation": getComputedColor('--c-parks'),
+  "Cultural": getComputedColor('--c-cultural')
+};
+
+function getComputedColor(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+let allProjects = [];
+let map, markersLayer;
+const activeStatus = new Set();
+const activeType = new Set();
+let searchTerm = "";
+
+function parseInvestment(str) {
+  if (!str) return 0;
+  const num = parseFloat(String(str).replace(/[^0-9.]/g, ""));
+  if (isNaN(num)) return 0;
+  return /b/i.test(str) ? num * 1000 : num; // normalize to millions
+}
+
+function init(data) {
+  allProjects = data;
+
+  const statuses = [...new Set(data.map(p => p.status))];
+  const types = [...new Set(data.map(p => p.type))];
+  statuses.forEach(s => activeStatus.add(s));
+  types.forEach(t => activeType.add(t));
+
+  renderFilterGroup('statusFilters', statuses, 'status', null);
+  renderFilterGroup('typeFilters', types, 'type', TYPE_COLORS);
+
+  map = L.map('map', { scrollWheelZoom: true }).setView([28.0395, -81.9498], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  markersLayer = L.layerGroup().addTo(map);
+  render();
+
+  document.getElementById('searchBox').addEventListener('input', e => {
+    searchTerm = e.target.value.toLowerCase();
+    render();
+  });
+  document.getElementById('resetLink').addEventListener('click', () => {
+    activeStatus.clear(); statuses.forEach(s => activeStatus.add(s));
+    activeType.clear(); types.forEach(t => activeType.add(t));
+    searchTerm = "";
+    document.getElementById('searchBox').value = "";
+    document.querySelectorAll('.filter-row input').forEach(cb => cb.checked = true);
+    render();
+  });
+}
+
+function renderFilterGroup(containerId, values, kind, colorMap) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+  values.forEach(val => {
+    const row = document.createElement('label');
+    row.className = 'filter-row';
+    const swatch = colorMap ? `<span class="swatch" style="background:${colorMap[val] || '#888'}"></span>` : '';
+    row.innerHTML = `<input type="checkbox" checked data-kind="${kind}" data-val="${val}"> ${swatch} <span>${val}</span>`;
+    container.appendChild(row);
+    row.querySelector('input').addEventListener('change', e => {
+      const set = kind === 'status' ? activeStatus : activeType;
+      if (e.target.checked) set.add(val); else set.delete(val);
+      render();
+    });
+  });
+}
+
+function render() {
+  const filtered = allProjects.filter(p => {
+    if (!activeStatus.has(p.status)) return false;
+    if (!activeType.has(p.type)) return false;
+    if (searchTerm && !(`${p.name} ${p.address}`.toLowerCase().includes(searchTerm))) return false;
+    return true;
+  });
+
+  markersLayer.clearLayers();
+
+  filtered.forEach(p => {
+    const color = TYPE_COLORS[p.type] || '#555';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:18px;height:18px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 18],
+      popupAnchor: [0, -16]
+    });
+    const marker = L.marker([p.lat, p.lng], { icon }).addTo(markersLayer);
+    const photoTag = p.photo ? `<img class="popup-photo" src="${p.photo}" alt="${p.name}" onerror="this.style.display='none'">` : '';
+    marker.bindPopup(`
+      ${photoTag}
+      <div class="popup-type-tag" style="background:${color}">${p.type}</div>
+      <div class="popup-title">${p.name}</div>
+      <div class="popup-desc">${p.description}</div>
+      <div class="popup-meta">
+        <strong>Status:</strong> ${p.status}<br>
+        <strong>Developer:</strong> ${p.developer}<br>
+        <strong>Construction:</strong> ${p.construction}<br>
+        <strong>Investment:</strong> ${p.investment}<br>
+        <strong>Units/Jobs:</strong> ${p.units}
+      </div>
+      ${p.source ? `<a class="popup-link" href="${p.source}" target="_blank">More information →</a>` : ''}
+    `);
+  });
+
+  renderStats(filtered);
+}
+
+function renderStats(filtered) {
+  const totalInvestment = filtered.reduce((sum, p) => sum + parseInvestment(p.investment), 0);
+  const underConstruction = filtered.filter(p => p.status === 'Under Construction').length;
+
+  document.getElementById('statsStrip').innerHTML = `
+    <div class="stat"><span class="num">${filtered.length}</span><span class="label">Projects shown</span></div>
+    <div class="stat"><span class="num">$${totalInvestment.toFixed(1)}M</span><span class="label">Combined investment</span></div>
+    <div class="stat"><span class="num">${underConstruction}</span><span class="label">Under construction</span></div>
+  `;
+}
+
+// Load from Google Sheet if configured, otherwise use sample data
+if (SHEET_CSV_URL) {
+  Papa.parse(SHEET_CSV_URL, {
+    download: true,
+    header: true,
+    complete: results => {
+      const rows = results.data
+        .filter(r => r.name && r.lat && r.lng)
+        .map(r => ({
+          name: r.name, address: r.address, lat: parseFloat(r.lat), lng: parseFloat(r.lng),
+          status: r.status, type: r.type, description: r.description, developer: r.developer,
+          construction: r.construction, investment: r.investment, units: r.units, source: r.source, photo: r.photo
+        }));
+      init(rows);
+    },
+    error: () => init(SAMPLE_DATA)
+  });
+} else {
+  init(SAMPLE_DATA);
+}
+</script>
+</body>
+</html>
