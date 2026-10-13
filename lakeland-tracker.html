@@ -480,7 +480,7 @@ function renderEditPanel() {
     <div style="margin-top:8px"><span class="moved-count">${names.length}</span> pin${names.length === 1 ? '' : 's'} moved</div>
     ${names.length ? `<ul>${names.map(n => `<li>${n}</li>`).join('')}</ul>` : ''}
     <button class="btn-primary" id="downloadCsv" ${names.length ? '' : 'disabled'}>Download updated CSV</button>
-    <button class="btn-secondary" id="undoEdits" ${names.length ? '' : 'hidden'}>Undo all moves</button>
+    ${names.length ? '<button class="btn-secondary" id="undoEdits">Undo all moves</button>' : ''}
   `;
   document.getElementById('downloadCsv').onclick = downloadCsv;
   const undo = document.getElementById('undoEdits');
