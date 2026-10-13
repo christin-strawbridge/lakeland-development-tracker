@@ -187,6 +187,28 @@
     line-height: 1.5;
   }
 
+  .edit-panel {
+    background: #FFF4E8;
+    border: 1px solid var(--citrus-light);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+  .edit-panel strong { color: var(--deep-teal); display: block; margin-bottom: 4px; font-size: 0.9rem; }
+  .edit-panel .moved-count { font-weight: 600; color: var(--citrus); }
+  .edit-panel button {
+    display: block; width: 100%; margin-top: 8px; padding: 8px 10px;
+    border-radius: 6px; border: none; cursor: pointer;
+    font: 600 0.82rem 'Public Sans', sans-serif;
+  }
+  .edit-panel .btn-primary { background: var(--deep-teal); color: #fff; }
+  .edit-panel .btn-primary:disabled { opacity: 0.45; cursor: default; }
+  .edit-panel .btn-secondary { background: transparent; color: var(--teal-mid); border: 1px solid var(--line); }
+  .edit-panel ul { margin: 8px 0 0; padding-left: 16px; max-height: 120px; overflow-y: auto; }
+  .popup-coords { font-size: 0.75rem; color: #777; margin-top: 6px; }
+
   @media (max-width: 760px) {
     .body { flex-direction: column; }
     .sidebar { width: 100%; max-height: 220px; border-right: none; border-bottom: 1px solid var(--line); }
@@ -209,6 +231,7 @@
 
   <div class="body">
     <div class="sidebar">
+      <div class="edit-panel" id="editPanel" hidden></div>
       <h2>Search</h2>
       <input type="text" class="search-box" id="searchBox" placeholder="Project name or address…">
 
@@ -273,6 +296,25 @@ const activeStatus = new Set();
 const activeType = new Set();
 let searchTerm = "";
 
+/* ============================================================
+   EDIT MODE: open the page with ?edit at the end of the URL.
+   Pins become draggable. Download the corrected CSV when done
+   and replace lakeland-projects.csv on GitHub with it.
+   ============================================================ */
+const EDIT_MODE = new URLSearchParams(location.search).has('edit');
+const EDIT_STORE_KEY = 'ldt-pin-edits';
+let rawRows = [];          // full CSV rows, so the export keeps every column
+let csvFields = [];
+let pinEdits = {};         // { projectName: {lat, lng} }
+
+function loadEdits() {
+  try { pinEdits = JSON.parse(localStorage.getItem(EDIT_STORE_KEY) || '{}') || {}; }
+  catch (e) { pinEdits = {}; }
+}
+function saveEdits() {
+  try { localStorage.setItem(EDIT_STORE_KEY, JSON.stringify(pinEdits)); } catch (e) {}
+}
+
 // Returns the first dollar figure in the text, normalized to millions.
 // Ignores text like "FY26" or "through 2025" so they don't inflate the total.
 function parseInvestment(str) {
@@ -295,6 +337,17 @@ function formatMillions(m) {
 
 function init(data) {
   allProjects = data;
+  if (EDIT_MODE) {
+    loadEdits();
+    allProjects.forEach(p => {
+      const e = pinEdits[p.name];
+      if (!e) return;
+      // Already saved to GitHub? Then this edit is done; forget it.
+      if (Math.abs(e.lat - p.lat) < 1e-6 && Math.abs(e.lng - p.lng) < 1e-6) { delete pinEdits[p.name]; return; }
+      p.lat = e.lat; p.lng = e.lng;
+    });
+    saveEdits();
+  }
 
   const statuses = [...new Set(data.map(p => p.status))];
   const types = [...new Set(data.map(p => p.type))];
@@ -305,13 +358,21 @@ function init(data) {
   renderFilterGroup('typeFilters', types, 'type', TYPE_COLORS);
 
   map = L.map('map', { scrollWheelZoom: true }).setView([28.0395, -81.9498], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19
   }).addTo(map);
 
+  if (EDIT_MODE) {
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Imagery &copy; Esri', maxZoom: 19
+    });
+    L.control.layers({ 'Street map': streets, 'Satellite': satellite }, null, { collapsed: false }).addTo(map);
+  }
+
   markersLayer = L.layerGroup().addTo(map);
   render();
+  if (EDIT_MODE) renderEditPanel();
 
   document.getElementById('searchBox').addEventListener('input', e => {
     searchTerm = e.target.value.toLowerCase();
@@ -363,7 +424,20 @@ function render() {
       iconAnchor: [9, 18],
       popupAnchor: [0, -16]
     });
-    const marker = L.marker([p.lat, p.lng], { icon }).addTo(markersLayer);
+    const marker = L.marker([p.lat, p.lng], { icon, draggable: EDIT_MODE }).addTo(markersLayer);
+    if (EDIT_MODE) {
+      marker.on('dragend', () => {
+        const ll = marker.getLatLng();
+        p.lat = Math.round(ll.lat * 1e6) / 1e6;
+        p.lng = Math.round(ll.lng * 1e6) / 1e6;
+        pinEdits[p.name] = { lat: p.lat, lng: p.lng };
+        saveEdits();
+        renderEditPanel();
+        const c = marker.getPopup() && marker.getPopup().getElement();
+        const el = c && c.querySelector('.popup-coords');
+        if (el) el.textContent = `Pin: ${p.lat}, ${p.lng}`;
+      });
+    }
     const photoTag = p.photo ? `<img class="popup-photo" src="${p.photo}" alt="${p.name}" onerror="this.style.display='none'">` : '';
     marker.bindPopup(`
       ${photoTag}
@@ -378,6 +452,7 @@ function render() {
         <strong>Units/Jobs:</strong> ${p.units}
       </div>
       ${p.source ? `<a class="popup-link" href="${p.source}" target="_blank">More information →</a>` : ''}
+      ${EDIT_MODE ? `<div class="popup-coords">${p.address || ''}<br>Pin: ${p.lat}, ${p.lng}</div>` : ''}
     `);
   });
 
@@ -395,12 +470,47 @@ function renderStats(filtered) {
   `;
 }
 
+function renderEditPanel() {
+  const panel = document.getElementById('editPanel');
+  panel.hidden = false;
+  const names = Object.keys(pinEdits);
+  panel.innerHTML = `
+    <strong>Edit mode</strong>
+    Drag any pin to its correct spot. Click a pin to see its address. Switch to Satellite in the map corner to see buildings.
+    <div style="margin-top:8px"><span class="moved-count">${names.length}</span> pin${names.length === 1 ? '' : 's'} moved</div>
+    ${names.length ? `<ul>${names.map(n => `<li>${n}</li>`).join('')}</ul>` : ''}
+    <button class="btn-primary" id="downloadCsv" ${names.length ? '' : 'disabled'}>Download updated CSV</button>
+    <button class="btn-secondary" id="undoEdits" ${names.length ? '' : 'hidden'}>Undo all moves</button>
+  `;
+  document.getElementById('downloadCsv').onclick = downloadCsv;
+  const undo = document.getElementById('undoEdits');
+  if (undo) undo.onclick = () => {
+    if (!confirm('Put every moved pin back where it started?')) return;
+    pinEdits = {}; saveEdits(); location.reload();
+  };
+}
+
+function downloadCsv() {
+  const out = rawRows.map(r => {
+    const e = pinEdits[r.name];
+    return e ? { ...r, lat: e.lat, lng: e.lng } : r;
+  });
+  const csv = Papa.unparse(out, { columns: csvFields });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'lakeland-projects.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
 // Load from Google Sheet if configured, otherwise use sample data
 if (SHEET_CSV_URL) {
   Papa.parse(SHEET_CSV_URL, {
     download: true,
     header: true,
     complete: results => {
+      csvFields = results.meta.fields;
+      rawRows = results.data.filter(r => r.name);
       const rows = results.data
         .filter(r => r.name && r.lat && r.lng)
         .map(r => ({
