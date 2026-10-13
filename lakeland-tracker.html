@@ -166,8 +166,7 @@
   }
   .popup-photo {
     width: 100%;
-    max-width: 260px;
-    height: 130px;
+    height: 210px;
     object-fit: cover;
     border-radius: 6px;
     margin-bottom: 8px;
@@ -453,7 +452,11 @@ function render() {
       </div>
       ${p.source ? `<a class="popup-link" href="${p.source}" target="_blank">More information →</a>` : ''}
       ${EDIT_MODE ? `<div class="popup-coords">${p.address || ''}<br>Pin: ${p.lat}, ${p.lng}</div>` : ''}
-    `);
+    `, p.photo ? (() => {
+      // Wider card when there's a photo; stays within small phone screens.
+      const w = Math.min(380, window.innerWidth - 80);
+      return { minWidth: w, maxWidth: w };
+    })() : {});
   });
 
   renderStats(filtered);
