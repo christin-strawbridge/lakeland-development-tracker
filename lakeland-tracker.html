@@ -206,6 +206,11 @@
   .edit-panel .btn-primary:disabled { opacity: 0.45; cursor: default; }
   .edit-panel .btn-secondary { background: transparent; color: var(--teal-mid); border: 1px solid var(--line); }
   .edit-panel ul { margin: 8px 0 0; padding-left: 16px; max-height: 120px; overflow-y: auto; }
+  .status-sym {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--teal-mid); flex-shrink: 0;
+  }
   .popup-coords { font-size: 0.75rem; color: #777; margin-top: 6px; }
 
   @media (max-width: 760px) {
@@ -287,6 +292,27 @@ const TYPE_COLORS = {
 
 function getComputedColor(varName) {
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+/* Status symbols shown inside each pin and next to the Status filters. */
+const STATUS_ICON_PATHS = {
+  completed:    '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  construction: '<path d="M3 21l9-9"/><path d="M9.5 5.5l3-3 9 9-3 3z"/><path d="M12.5 8.5l3 3"/>',
+  development:  '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+  proposed:     '<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1v.5h6V15c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/>'
+};
+function statusKey(status) {
+  const s = String(status || '').toLowerCase();
+  if (s.includes('complet')) return 'completed';
+  if (s.includes('construction')) return 'construction';
+  if (s.includes('develop')) return 'development';
+  if (s.includes('propos')) return 'proposed';
+  return null;
+}
+function statusIcon(status, size, stroke) {
+  const k = statusKey(status);
+  if (!k) return '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${STATUS_ICON_PATHS[k]}</svg>`;
 }
 
 let allProjects = [];
@@ -394,7 +420,8 @@ function renderFilterGroup(containerId, values, kind, colorMap) {
     const row = document.createElement('label');
     row.className = 'filter-row';
     const swatch = colorMap ? `<span class="swatch" style="background:${colorMap[val] || '#888'}"></span>` : '';
-    row.innerHTML = `<input type="checkbox" checked data-kind="${kind}" data-val="${val}"> ${swatch} <span>${val}</span>`;
+    const sym = kind === 'status' ? `<span class="status-sym">${statusIcon(val, 12, '#fff')}</span>` : '';
+    row.innerHTML = `<input type="checkbox" checked data-kind="${kind}" data-val="${val}"> ${swatch}${sym} <span>${val}</span>`;
     container.appendChild(row);
     row.querySelector('input').addEventListener('change', e => {
       const set = kind === 'status' ? activeStatus : activeType;
@@ -418,7 +445,7 @@ function render() {
     const color = TYPE_COLORS[p.type] || '#555';
     const icon = L.divIcon({
       className: '',
-      html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:3px solid #fff;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,0.45);"></div>`,
+      html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:3px solid #fff;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);display:flex;">${statusIcon(p.status, 13, '#fff')}</span></div>`,
       iconSize: [28, 28],
       iconAnchor: [14, 32],
       popupAnchor: [0, -30]
