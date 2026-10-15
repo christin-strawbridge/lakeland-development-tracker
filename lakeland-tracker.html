@@ -284,7 +284,7 @@
         <div class="about-heading">Brought to you by the Lakeland Economic Development Council</div>
         <p>This tracker follows the development projects shaping downtown Lakeland, from early vision plans to projects completed since COVID.</p>
         <p>Project information comes from public sources and is updated regularly. Details may change as projects move forward.</p>
-        <p>If you're interested in a Lakeland site or want to learn more, contact Laura Taylor at <a href="tel:+18636873788">863-687-3788</a>.</p>
+        <p>If you're interested in a Lakeland site or want to learn more about these projects, contact Laura Taylor at <a href="mailto:ltaylor@lakelandedc.com">ltaylor@lakelandedc.com</a> or <a href="tel:+18636873788">863-687-3788</a>.</p>
         <a href="https://lakelandedc.com" target="_blank" rel="noopener">Visit the LEDC website &rarr;</a>
       </div>
     </div>
@@ -622,13 +622,11 @@ function parseJobs(str) {
 function renderStats(filtered) {
   const totalJobs = filtered.reduce((sum, p) => sum + parseJobs(p.jobs), 0);
   const totalInvestment = filtered.reduce((sum, p) => sum + parseInvestment(p.investment), 0);
-  const underConstruction = filtered.filter(p => p.status === 'Under Construction').length;
 
   document.getElementById('statsStrip').innerHTML = `
-    <div class="stat"><span class="num">${filtered.length}</span><span class="label">Projects shown</span></div>
-    <div class="stat"><span class="num">${formatMillions(totalInvestment)}</span><span class="label">Combined investment</span></div>
+    <div class="stat"><span class="num">${filtered.length}</span><span class="label">Projects</span></div>
+    <div class="stat"><span class="num">${formatMillions(totalInvestment)}</span><span class="label">Investment</span></div>
     <div class="stat"><span class="num">${totalJobs.toLocaleString()}</span><span class="label">Jobs</span></div>
-    <div class="stat"><span class="num">${underConstruction}</span><span class="label">Under construction</span></div>
   `;
 }
 
