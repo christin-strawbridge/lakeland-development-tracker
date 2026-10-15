@@ -145,6 +145,11 @@
 
   #map { flex: 1; }
 
+  .lake-label {
+    color: #8FD3FF; font: 600 12px 'Public Sans', sans-serif; text-align: center;
+    text-shadow: 0 0 3px #00263a, 0 0 3px #00263a, 0 0 2px #00263a; white-space: nowrap;
+    pointer-events: none;
+  }
   .about-link {
     margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line);
     font-size: 0.82rem; font-weight: 600; color: var(--teal-mid); cursor: pointer;
@@ -473,9 +478,22 @@ function init(data) {
       attribution: 'Imagery &copy; Esri', maxZoom: 19 }),
     L.tileLayer(esri + 'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19, opacity: 0.55 }),
-    L.tileLayer(esri + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19, opacity: 0.85 })
   ]).addTo(map);
+
+  // Lake names (blue), added by hand so park and place labels don't double up.
+  const LAKES = [
+    ['Lake Wire', 28.04618, -81.96037], ['Lake Mirror', 28.04422, -81.95186],
+    ['Lake Morton', 28.03891, -81.95281], ['Lake Beulah', 28.04003, -81.96846],
+    ['Lake Bonnet', 28.04809, -81.97669], ['Lake Hunter', 28.03293, -81.96602],
+    ['Lake Bonny', 28.03664, -81.93437], ['Lake Parker', 28.0585, -81.9235],
+    ['Lake Hollingsworth', 28.02282, -81.94511]
+  ];
+  map.createPane('lakeLabels').style.zIndex = 450;
+  const lakeLayer = L.layerGroup(LAKES.map(([name, lat, lng]) => L.marker([lat, lng], {
+    pane: 'lakeLabels', interactive: false, keyboard: false,
+    icon: L.divIcon({ className: 'lake-label', html: name, iconSize: [120, 16], iconAnchor: [60, 8] })
+  })));
+  satellite.addLayer(lakeLayer);
   const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
   });
@@ -540,9 +558,8 @@ function render() {
 
   markersLayer.clearLayers();
 
-  // Order used by Previous / Next: by stage, then by name.
-  const order = { proposed: 0, development: 1, construction: 2, completed: 3 };
-  filtered.sort((a, b) => (order[statusStage(a.status)] ?? 9) - (order[statusStage(b.status)] ?? 9) || a.name.localeCompare(b.name));
+  // Order used by Previous / Next: west to east across the map.
+  filtered.sort((a, b) => a.lng - b.lng || b.lat - a.lat);
   visibleMarkers = [];
 
   filtered.forEach((p, i) => {
