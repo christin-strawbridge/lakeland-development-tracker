@@ -385,7 +385,9 @@ function init(data) {
   renderFilterGroup('statusFilters', statuses, 'status', Object.fromEntries(statuses.map(v => [v, statusColor(v)])));
   renderFilterGroup('typeFilters', types, 'type', null);
 
-  map = L.map('map', { scrollWheelZoom: true }).setView([28.0395, -81.9498], 13);
+  map = L.map('map', { scrollWheelZoom: true });
+  // Opening view: downtown Lakeland. Phones start one step further out.
+  map.setView([28.04668, -81.95251], window.innerWidth < 760 ? 14 : 15);
   const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19
