@@ -9,8 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --deep-teal: #0B3B3C;
-    --teal-mid: #145252;
+    --deep-teal: #003C51;   /* LEDC navy */
+    --teal-mid: #0A4E66;    /* lighter LEDC navy */
+    --ledc-teal: #16BDB5;   /* LEDC teal */
+    --ledc-teal-dark: #0E8A84;
     --citrus: #E17A2D;
     --citrus-light: #F4A661;
     --cream: #FAF8F3;
@@ -45,7 +47,7 @@
     align-items: baseline;
     gap: 14px;
     flex-wrap: wrap;
-    border-bottom: 3px solid var(--citrus);
+    border-bottom: 3px solid var(--ledc-teal);
   }
   header h1 {
     font-family: 'Archivo', sans-serif;
@@ -136,7 +138,7 @@
   }
   .reset-link {
     font-size: 0.8rem;
-    color: var(--citrus);
+    color: var(--ledc-teal-dark);
     text-decoration: none;
     font-weight: 600;
     cursor: pointer;
@@ -156,7 +158,7 @@
   }
   .about-panel .about-heading { font-weight: 700; color: var(--deep-teal); font-size: 0.82rem; margin-bottom: 6px; }
   .about-panel p { margin: 0 0 8px; }
-  .about-panel a { color: var(--citrus); font-weight: 600; text-decoration: none; }
+  .about-panel a { color: var(--ledc-teal-dark); font-weight: 600; text-decoration: none; }
   .popup-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
@@ -200,7 +202,7 @@
   .popup-desc { font-size: 0.85rem; line-height: 1.4; margin-bottom: 8px; }
   .popup-meta { font-size: 0.78rem; color: #555; line-height: 1.6; }
   .popup-meta strong { color: var(--ink); }
-  .popup-link { font-size: 0.8rem; color: var(--citrus); font-weight: 600; text-decoration: none; }
+  .popup-link { font-size: 0.8rem; color: var(--ledc-teal-dark); font-weight: 600; text-decoration: none; }
 
   .empty-note {
     padding: 40px 16px;
@@ -274,6 +276,7 @@
         <div class="about-heading">Brought to you by the Lakeland Economic Development Council</div>
         <p>This tracker follows the development projects shaping downtown Lakeland, from early vision plans to projects completed since COVID.</p>
         <p>Project information comes from public sources and is updated regularly. Details may change as projects move forward.</p>
+        <p>If you're interested in a Lakeland site or want to learn more, contact Laura Taylor at <a href="tel:+18636873788">863-687-3788</a>.</p>
         <a href="https://lakelandedc.com" target="_blank" rel="noopener">Visit the LEDC website &rarr;</a>
       </div>
     </div>
@@ -557,8 +560,6 @@ function render() {
         saveEdits();
         renderEditPanel();
         const c = marker.getPopup() && marker.getPopup().getElement();
-        const el = c && c.querySelector('.popup-coords');
-        if (el) el.textContent = `Pin: ${p.lat}, ${p.lng}`;
       });
     }
     const photoTag = p.photo ? `<img class="popup-photo" src="${p.photo}" alt="${p.name}" onerror="this.style.display='none'">` : '';
@@ -572,7 +573,7 @@ function render() {
         ${metaLines(p)}
       </div>
       ${p.source ? `<a class="popup-link" href="${p.source}" target="_blank">More information →</a>` : ''}
-      ${EDIT_MODE ? `<div class="popup-coords">${p.address || ''}<br>Pin: ${p.lat}, ${p.lng}</div>` : ''}
+      ${EDIT_MODE ? `<div class="popup-coords">${p.address || ''}</div>` : ''}
       ${filtered.length > 1 ? `<div class="popup-nav">
         <button type="button" data-step="-1">&lsaquo; Previous</button>
         <span>${i + 1} of ${filtered.length}</span>
