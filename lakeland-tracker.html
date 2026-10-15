@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catalyst Lakeland</title>
+<title>Lakeland Downtown Development Tracker</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -150,27 +150,13 @@
     text-shadow: 0 0 3px #00263a, 0 0 3px #00263a, 0 0 2px #00263a; white-space: nowrap;
     pointer-events: none;
   }
-  .about-link {
+  .about-panel {
     margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line);
-    font-size: 0.82rem; font-weight: 600; color: var(--teal-mid); cursor: pointer;
+    font-size: 0.78rem; line-height: 1.5; color: #555;
   }
-  .about-link:hover { text-decoration: underline; }
-  .about-overlay {
-    position: fixed; inset: 0; background: rgba(11,59,60,0.55); z-index: 2000;
-    display: flex; align-items: center; justify-content: center; padding: 16px;
-  }
-  .about-overlay[hidden] { display: none; }
-  .about-box {
-    background: #fff; border-radius: 10px; max-width: 460px; width: 100%;
-    padding: 26px 28px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    font-size: 0.92rem; line-height: 1.55;
-  }
-  .about-box h2 { font-family: 'Archivo', sans-serif; color: var(--deep-teal); margin: 0 0 10px; font-size: 1.25rem; }
-  .about-box a { color: var(--citrus); font-weight: 600; text-decoration: none; }
-  .about-close {
-    position: absolute; top: 10px; right: 12px; border: none; background: none;
-    font-size: 1.5rem; line-height: 1; cursor: pointer; color: #888;
-  }
+  .about-panel .about-heading { font-weight: 700; color: var(--deep-teal); font-size: 0.82rem; margin-bottom: 6px; }
+  .about-panel p { margin: 0 0 8px; }
+  .about-panel a { color: var(--citrus); font-weight: 600; text-decoration: none; }
   .popup-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
@@ -263,7 +249,7 @@
 
   <header>
     <div>
-      <h1>Catalyst Lakeland</h1>
+      <h1>Lakeland Downtown Development Tracker</h1>
     </div>
     <div class="tagline">Live pipeline of projects shaping Lakeland</div>
   </header>
@@ -284,20 +270,15 @@
 
       <span class="reset-link" id="resetLink">Reset all filters</span>
 
-      <div class="about-link" id="aboutLink">About Catalyst Lakeland</div>
+      <div class="about-panel">
+        <div class="about-heading">Brought to you by the Lakeland Economic Development Council</div>
+        <p>This tracker follows the development projects shaping downtown Lakeland, from early vision plans to projects completed since COVID.</p>
+        <p>Project information comes from public sources and is updated regularly. Details may change as projects move forward.</p>
+        <a href="https://lakelandedc.com" target="_blank" rel="noopener">Visit the LEDC website &rarr;</a>
+      </div>
     </div>
 
     <div id="map"></div>
-  </div>
-</div>
-
-<div class="about-overlay" id="aboutOverlay" hidden>
-  <div class="about-box" role="dialog" aria-labelledby="aboutTitle">
-    <button class="about-close" id="aboutClose" aria-label="Close">&times;</button>
-    <h2 id="aboutTitle">About Catalyst Lakeland</h2>
-    <p>Catalyst Lakeland is a project of the Lakeland Economic Development Council (LEDC). It tracks the development projects shaping downtown Lakeland, from early vision plans to projects completed since COVID.</p>
-    <p>Project information comes from public sources and is updated regularly. Details may change as projects move forward.</p>
-    <a href="https://lakelandedc.com" target="_blank" rel="noopener">Visit the LEDC website &rarr;</a>
   </div>
 </div>
 
@@ -370,7 +351,7 @@ function normalizeStatus(status) {
   return k ? STATUS_LABELS[k] : String(status || '').trim();
 }
 
-// Project types match the original Catalyst filters (older names still work).
+// Project types match the original filter categories (older names still work).
 const TYPE_ALIASES = {
   'residential': 'Multifamily', 'multifamily': 'Multifamily',
   'mixed use': 'Mixed-Use', 'mixed-use': 'Mixed-Use',
@@ -507,11 +488,6 @@ function init(data) {
     searchTerm = e.target.value.toLowerCase();
     render();
   });
-  const about = document.getElementById('aboutOverlay');
-  document.getElementById('aboutLink').addEventListener('click', () => { about.hidden = false; });
-  document.getElementById('aboutClose').addEventListener('click', () => { about.hidden = true; });
-  about.addEventListener('click', e => { if (e.target === about) about.hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') about.hidden = true; });
 
   // Previous / Next buttons inside the popup.
   document.getElementById('map').addEventListener('click', e => {
