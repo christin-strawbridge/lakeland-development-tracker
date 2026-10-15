@@ -374,7 +374,10 @@ function init(data) {
     saveEdits();
   }
 
-  const statuses = [...new Set(data.map(p => p.status))];
+  // Status filters in real-life order: Proposed > In Development > Under Construction > Completed.
+  const STAGE = s => { const t = String(s).toLowerCase();
+    return t.includes('propos') ? 0 : t.includes('develop') ? 1 : t.includes('construction') ? 2 : t.includes('complet') ? 3 : 4; };
+  const statuses = [...new Set(data.map(p => p.status))].sort((a, b) => STAGE(a) - STAGE(b));
   const types = [...new Set(data.map(p => p.type))];
   statuses.forEach(s => activeStatus.add(s));
   types.forEach(t => activeType.add(t));
