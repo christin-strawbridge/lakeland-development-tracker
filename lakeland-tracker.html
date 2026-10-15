@@ -621,7 +621,7 @@ function metaLines(p) {
     ['Investment', p.investment], ['Units', p.units], ['Jobs', p.jobs], ['Size', p.sqft]
   ];
   return fields
-    .filter(([k, v]) => v && String(v).trim() && !/^n\/?a$/i.test(String(v).trim())
+    .filter(([k, v]) => v && String(v).trim() && !/^(n\/?a|-+)$/i.test(String(v).trim())
       && !((k === 'Units' || k === 'Jobs') && /^tbd$/i.test(String(v).trim())))
     .map(([k, v]) => `<strong>${k}:</strong> ${String(v).trim()}`)
     .join('<br>');
