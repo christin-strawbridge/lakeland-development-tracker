@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lakeland Development Tracker</title>
+<title>Catalyst Lakeland</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -145,6 +145,39 @@
 
   #map { flex: 1; }
 
+  .about-link {
+    margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-size: 0.82rem; font-weight: 600; color: var(--teal-mid); cursor: pointer;
+  }
+  .about-link:hover { text-decoration: underline; }
+  .about-overlay {
+    position: fixed; inset: 0; background: rgba(11,59,60,0.55); z-index: 2000;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .about-overlay[hidden] { display: none; }
+  .about-box {
+    background: #fff; border-radius: 10px; max-width: 460px; width: 100%;
+    padding: 26px 28px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    font-size: 0.92rem; line-height: 1.55;
+  }
+  .about-box h2 { font-family: 'Archivo', sans-serif; color: var(--deep-teal); margin: 0 0 10px; font-size: 1.25rem; }
+  .about-box a { color: var(--citrus); font-weight: 600; text-decoration: none; }
+  .about-close {
+    position: absolute; top: 10px; right: 12px; border: none; background: none;
+    font-size: 1.5rem; line-height: 1; cursor: pointer; color: #888;
+  }
+  .popup-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
+    font-size: 0.78rem; color: #888;
+  }
+  .popup-nav button {
+    border: 1px solid var(--line); background: #fff; border-radius: 14px;
+    padding: 4px 12px; font: 600 0.78rem 'Public Sans', sans-serif;
+    color: var(--teal-mid); cursor: pointer;
+  }
+  .popup-nav button:hover { background: var(--cream); }
+
   .leaflet-popup-content-wrapper { border-radius: 8px; }
   .popup-title {
     font-family: 'Archivo', sans-serif;
@@ -225,10 +258,9 @@
 
   <header>
     <div>
-      <div class="eyebrow">Lakeland Economic Development Council</div>
-      <h1>Development Tracker</h1>
+      <h1>Catalyst Lakeland</h1>
     </div>
-    <div class="tagline">Live pipeline of projects shaping Lakeland's growth</div>
+    <div class="tagline">Live pipeline of projects shaping Lakeland</div>
   </header>
 
   <div class="stats-strip" id="statsStrip"></div>
@@ -246,9 +278,21 @@
       <div class="filter-group" id="typeFilters"></div>
 
       <span class="reset-link" id="resetLink">Reset all filters</span>
+
+      <div class="about-link" id="aboutLink">About Catalyst Lakeland</div>
     </div>
 
     <div id="map"></div>
+  </div>
+</div>
+
+<div class="about-overlay" id="aboutOverlay" hidden>
+  <div class="about-box" role="dialog" aria-labelledby="aboutTitle">
+    <button class="about-close" id="aboutClose" aria-label="Close">&times;</button>
+    <h2 id="aboutTitle">About Catalyst Lakeland</h2>
+    <p>Catalyst Lakeland is a project of the Lakeland Economic Development Council (LEDC). It tracks the development projects shaping downtown Lakeland, from early vision plans to recently completed projects.</p>
+    <p>Project information comes from public sources and is updated regularly. Details may change as projects move forward.</p>
+    <a href="https://lakelandedc.com" target="_blank" rel="noopener">Visit the LEDC website &rarr;</a>
   </div>
 </div>
 
@@ -301,13 +345,36 @@ const STATUS_COLORS = {
   development:  '#8E3FB0',  // purple
   proposed:     '#E5197E'   // magenta
 };
-function statusColor(status) {
+function statusStage(status) {
   const t = String(status || '').toLowerCase();
-  if (t.includes('complet')) return STATUS_COLORS.completed;
-  if (t.includes('construction')) return STATUS_COLORS.construction;
-  if (t.includes('develop')) return STATUS_COLORS.development;
-  if (t.includes('propos')) return STATUS_COLORS.proposed;
-  return '#555';
+  if (t.includes('vision') || t.includes('propos')) return 'proposed';
+  if (t.includes('design') || t.includes('develop')) return 'development';
+  if (t.includes('construction')) return 'construction';
+  if (t.includes('complet')) return 'completed';
+  return null;
+}
+function statusColor(status) { return STATUS_COLORS[statusStage(status)] || '#555'; }
+
+// Status names shown on the site (older names in the data still work).
+const STATUS_LABELS = {
+  proposed: 'Vision Plans', development: 'In Design',
+  construction: 'Under Construction', completed: 'Recently Completed'
+};
+function normalizeStatus(status) {
+  const k = statusStage(status);
+  return k ? STATUS_LABELS[k] : String(status || '').trim();
+}
+
+// Project types match the original Catalyst filters (older names still work).
+const TYPE_ALIASES = {
+  'residential': 'Multifamily', 'multifamily': 'Multifamily',
+  'mixed use': 'Mixed-Use', 'mixed-use': 'Mixed-Use',
+  'parks & recreation': 'Public/Civic', 'parks & rec': 'Public/Civic', 'government': 'Public/Civic',
+  'public/civic': 'Public/Civic', 'hotel': 'Hospitality'
+};
+function normalizeType(type) {
+  const t = String(type || '').trim();
+  return TYPE_ALIASES[t.toLowerCase()] || t;
 }
 // Dark text on the gold badge so it stays readable; white text on the rest.
 function badgeText(color) { return color === STATUS_COLORS.construction ? '#1C2624' : '#fff'; }
@@ -316,6 +383,17 @@ function pinHtml(color) {
 }
 
 let allProjects = [];
+let visibleMarkers = [];
+let currentIndex = -1;
+
+function stepProject(step) {
+  if (!visibleMarkers.length) return;
+  const next = (currentIndex + step + visibleMarkers.length) % visibleMarkers.length;
+  const m = visibleMarkers[next];
+  map.closePopup();
+  map.panTo(m.getLatLng());
+  m.openPopup();
+}
 let map, markersLayer;
 const activeStatus = new Set();
 const activeType = new Set();
@@ -376,9 +454,9 @@ function init(data) {
 
   // Status filters in real-life order: Proposed > In Development > Under Construction > Completed.
   const STAGE = s => { const t = String(s).toLowerCase();
-    return t.includes('propos') ? 0 : t.includes('develop') ? 1 : t.includes('construction') ? 2 : t.includes('complet') ? 3 : 4; };
+    return t.includes('propos') || t.includes('vision') ? 0 : t.includes('develop') || t.includes('design') ? 1 : t.includes('construction') ? 2 : t.includes('complet') ? 3 : 4; };
   const statuses = [...new Set(data.map(p => p.status))].sort((a, b) => STAGE(a) - STAGE(b));
-  const types = [...new Set(data.map(p => p.type))];
+  const types = [...new Set(data.map(p => p.type))].sort((a, b) => a.localeCompare(b));
   statuses.forEach(s => activeStatus.add(s));
   types.forEach(t => activeType.add(t));
 
@@ -388,17 +466,20 @@ function init(data) {
   map = L.map('map', { scrollWheelZoom: true });
   // Opening view: downtown Lakeland. Phones start one step further out.
   map.setView([28.04668, -81.95251], window.innerWidth < 760 ? 14 : 15);
+  // Satellite by default, with faint street and place labels on top. Street map is a toggle.
+  const esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const satellite = L.layerGroup([
+    L.tileLayer(esri + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Imagery &copy; Esri', maxZoom: 19 }),
+    L.tileLayer(esri + 'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, opacity: 0.55 }),
+    L.tileLayer(esri + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, opacity: 0.85 })
+  ]).addTo(map);
   const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19
-  }).addTo(map);
-
-  if (EDIT_MODE) {
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Imagery &copy; Esri', maxZoom: 19
-    });
-    L.control.layers({ 'Street map': streets, 'Satellite': satellite }, null, { collapsed: false }).addTo(map);
-  }
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  });
+  L.control.layers({ 'Satellite': satellite, 'Street map': streets }, null, { collapsed: false, position: 'topright' }).addTo(map);
 
   markersLayer = L.layerGroup().addTo(map);
   render();
@@ -408,6 +489,20 @@ function init(data) {
     searchTerm = e.target.value.toLowerCase();
     render();
   });
+  const about = document.getElementById('aboutOverlay');
+  document.getElementById('aboutLink').addEventListener('click', () => { about.hidden = false; });
+  document.getElementById('aboutClose').addEventListener('click', () => { about.hidden = true; });
+  about.addEventListener('click', e => { if (e.target === about) about.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') about.hidden = true; });
+
+  // Previous / Next buttons inside the popup.
+  document.getElementById('map').addEventListener('click', e => {
+    const btn = e.target.closest('[data-step]');
+    if (!btn) return;
+    e.preventDefault();
+    stepProject(Number(btn.dataset.step));
+  });
+
   document.getElementById('resetLink').addEventListener('click', () => {
     activeStatus.clear(); statuses.forEach(s => activeStatus.add(s));
     activeType.clear(); types.forEach(t => activeType.add(t));
@@ -445,7 +540,12 @@ function render() {
 
   markersLayer.clearLayers();
 
-  filtered.forEach(p => {
+  // Order used by Previous / Next: by stage, then by name.
+  const order = { proposed: 0, development: 1, construction: 2, completed: 3 };
+  filtered.sort((a, b) => (order[statusStage(a.status)] ?? 9) - (order[statusStage(b.status)] ?? 9) || a.name.localeCompare(b.name));
+  visibleMarkers = [];
+
+  filtered.forEach((p, i) => {
     const color = statusColor(p.status);
     const icon = L.divIcon({
       className: '',
@@ -480,11 +580,18 @@ function render() {
       </div>
       ${p.source ? `<a class="popup-link" href="${p.source}" target="_blank">More information →</a>` : ''}
       ${EDIT_MODE ? `<div class="popup-coords">${p.address || ''}<br>Pin: ${p.lat}, ${p.lng}</div>` : ''}
+      ${filtered.length > 1 ? `<div class="popup-nav">
+        <button type="button" data-step="-1">&lsaquo; Previous</button>
+        <span>${i + 1} of ${filtered.length}</span>
+        <button type="button" data-step="1">Next &rsaquo;</button>
+      </div>` : ''}
     `, p.photo ? (() => {
       // Wider card when there's a photo; stays within small phone screens.
       const w = Math.min(380, window.innerWidth - 80);
       return { minWidth: w, maxWidth: w };
     })() : {});
+    marker.on('popupopen', () => { currentIndex = i; });
+    visibleMarkers.push(marker);
   });
 
   renderStats(filtered);
@@ -494,10 +601,11 @@ function render() {
 function metaLines(p) {
   const fields = [
     ['Developer', p.developer], ['Construction', p.construction],
-    ['Investment', p.investment], ['Units/Jobs', p.units], ['Size', p.sqft]
+    ['Investment', p.investment], ['Units', p.units], ['Jobs', p.jobs], ['Size', p.sqft]
   ];
   return fields
-    .filter(([, v]) => v && String(v).trim() && !/^n\/?a$/i.test(String(v).trim()))
+    .filter(([k, v]) => v && String(v).trim() && !/^n\/?a$/i.test(String(v).trim())
+      && !((k === 'Units' || k === 'Jobs') && /^tbd$/i.test(String(v).trim())))
     .map(([k, v]) => `<strong>${k}:</strong> ${String(v).trim()}`)
     .join('<br>');
 }
@@ -558,8 +666,8 @@ if (SHEET_CSV_URL) {
         .filter(r => r.name && r.lat && r.lng)
         .map(r => ({
           name: r.name, address: r.address, lat: parseFloat(r.lat), lng: parseFloat(r.lng),
-          status: r.status, type: r.type, description: r.description, developer: r.developer,
-          construction: r.construction, investment: r.investment, units: r.units, sqft: r.sqft, source: r.source, photo: r.photo
+          status: normalizeStatus(r.status), type: normalizeType(r.type), description: r.description, developer: r.developer,
+          construction: r.construction, investment: r.investment, units: r.units, jobs: r.jobs, sqft: r.sqft, source: r.source, photo: r.photo
         }));
       init(rows);
     },
