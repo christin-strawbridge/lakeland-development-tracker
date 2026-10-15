@@ -627,13 +627,22 @@ function metaLines(p) {
     .join('<br>');
 }
 
+// Jobs from the jobs column. If a cell has more than one number
+// (like "growing from 200 to 400"), the largest is used.
+function parseJobs(str) {
+  const nums = String(str || '').match(/\d[\d,]*/g);
+  return nums ? Math.max(...nums.map(n => parseInt(n.replace(/,/g, ''), 10))) : 0;
+}
+
 function renderStats(filtered) {
+  const totalJobs = filtered.reduce((sum, p) => sum + parseJobs(p.jobs), 0);
   const totalInvestment = filtered.reduce((sum, p) => sum + parseInvestment(p.investment), 0);
   const underConstruction = filtered.filter(p => p.status === 'Under Construction').length;
 
   document.getElementById('statsStrip').innerHTML = `
     <div class="stat"><span class="num">${filtered.length}</span><span class="label">Projects shown</span></div>
     <div class="stat"><span class="num">${formatMillions(totalInvestment)}</span><span class="label">Combined investment</span></div>
+    <div class="stat"><span class="num">${totalJobs.toLocaleString()}</span><span class="label">Jobs</span></div>
     <div class="stat"><span class="num">${underConstruction}</span><span class="label">Under construction</span></div>
   `;
 }
