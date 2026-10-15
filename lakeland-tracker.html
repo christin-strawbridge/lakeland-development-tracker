@@ -296,10 +296,10 @@ function getComputedColor(varName) {
 
 /* Pins are colored by status. */
 const STATUS_COLORS = {
-  completed:    '#1F7A5A',  // green
-  construction: '#E17A2D',  // citrus orange
-  development:  '#3B6FB6',  // blue
-  proposed:     '#8B8F96'   // gray
+  completed:    '#1FA9E1',  // bright sky blue
+  construction: '#F5B700',  // gold
+  development:  '#8E3FB0',  // purple
+  proposed:     '#E5197E'   // magenta
 };
 function statusColor(status) {
   const t = String(status || '').toLowerCase();
@@ -309,6 +309,8 @@ function statusColor(status) {
   if (t.includes('propos')) return STATUS_COLORS.proposed;
   return '#555';
 }
+// Dark text on the gold badge so it stays readable; white text on the rest.
+function badgeText(color) { return color === STATUS_COLORS.construction ? '#1C2624' : '#fff'; }
 function pinHtml(color) {
   return `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:3px solid #fff;box-sizing:border-box;box-shadow:0 2px 6px rgba(0,0,0,0.45);"></div>`;
 }
@@ -464,7 +466,7 @@ function render() {
     const photoTag = p.photo ? `<img class="popup-photo" src="${p.photo}" alt="${p.name}" onerror="this.style.display='none'">` : '';
     marker.bindPopup(`
       ${photoTag}
-      <div class="popup-type-tag" style="background:${color}">${p.status}</div>
+      <div class="popup-type-tag" style="background:${color};color:${badgeText(color)}">${p.status}</div>
       <div class="popup-kind">${p.type}</div>
       <div class="popup-title">${p.name}</div>
       <div class="popup-desc">${p.description}</div>
